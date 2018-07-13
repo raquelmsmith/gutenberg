@@ -31,6 +31,7 @@ class EditorProvider extends Component {
 		props.setupEditor( props.post, props.initialEdits );
 
 		if ( props.settings.autosave ) {
+			props.resetAutosave( props.settings.autosave );
 			props.createWarningNotice(
 				__( 'There is an autosave of this post that is more recent than the version below.' ),
 				{
@@ -109,6 +110,7 @@ export default withDispatch( ( dispatch ) => {
 		setupEditor,
 		updateEditorSettings,
 		updatePostLock,
+		resetAutosave,
 	} = dispatch( 'core/editor' );
 	const { createWarningNotice } = dispatch( 'core/notices' );
 
@@ -116,6 +118,7 @@ export default withDispatch( ( dispatch ) => {
 		setupEditor,
 		updateEditorSettings,
 		updatePostLock,
+		resetAutosave,
 		createWarningNotice,
 	};
 } )( EditorProvider );

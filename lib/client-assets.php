@@ -896,20 +896,13 @@ add_action( 'admin_enqueue_scripts', 'gutenberg_register_scripts_and_styles', 5 
  */
 function gutenberg_api_request( $path ) {
 	if ( empty( $path ) ) {
-		return;
+		return null;
 	}
 
 	$path_parts = parse_url( $path );
 	if ( false === $path_parts ) {
-		return;
+		return null;
 	}
-
-	$request = new WP_REST_Request( 'GET', $path_parts['path'] );
-	if ( ! empty( $path_parts['query'] ) ) {
-		parse_str( $path_parts['query'], $query_params );
-		$request->set_query_params( $query_params );
-	}
-
 
 	// Ensure the global $post remains the same after the API request is made.
 	// Because API requests can call the_content and other filters, callbacks
@@ -918,24 +911,32 @@ function gutenberg_api_request( $path ) {
 	global $post;
 	$backup_global_post = $post;
 
+	$request = new WP_REST_Request( 'GET', $path_parts['path'] );
+	if ( ! empty( $path_parts['query'] ) ) {
+		parse_str( $path_parts['query'], $query_params );
+		$request->set_query_params( $query_params );
+	}
+
 	$response = rest_do_request( $request );
 
-	// restore the global post
+	// restore the global post.
 	$post = $backup_global_post;
 
-	if ( 200 === $response->status ) {
-		$server = rest_get_server();
-		$data   = (array) $response->get_data();
-		$links  = $server->get_compact_response_links( $response );
-		if ( ! empty( $links ) ) {
-			$data['_links'] = $links;
-		}
-
-		return array(
-			'body'    => $data,
-			'headers' => $response->headers,
-		);
+	if ( 200 !== $response->status ) {
+		return null;
 	}
+
+	$server = rest_get_server();
+	$data   = (array) $response->get_data();
+	$links  = $server->get_compact_response_links( $response );
+	if ( ! empty( $links ) ) {
+		$data['_links'] = $links;
+	}
+
+	return array(
+		'body'    => $data,
+		'headers' => $response->headers,
+	);
 }
 
 /**
@@ -948,21 +949,16 @@ function gutenberg_api_request( $path ) {
  * @return array        Modified reduce accumulator.
  */
 function gutenberg_preload_api_request( $memo, $path ) {
-
 	// array_reduce() doesn't support passing an array in PHP 5.2
 	// so we need to make sure we start with one.
 	if ( ! is_array( $memo ) ) {
 		$memo = array();
 	}
 
-	if ( empty( $path ) ) {
-		return $memo;
-	}
+	$api_response = gutenberg_api_request( $path );
 
-	$reponse = gutenberg_api_request( $path );
-
-	if ( isset( $response ) ) {
-		$memo[ $path ] = $reponse;
+	if ( isset( $api_response ) ) {
+		$memo[ $path ] = $api_response;
 	}
 
 	return $memo;
@@ -1295,22 +1291,21 @@ add_filter( 'block_editor_settings', 'gutenberg_default_post_format_template', 1
  * @return WP_Post|boolean The post autosave. False if none found.
  */
 function gutenberg_get_autosave_newer_than_post_save( $post ) {
-	// Add autosave data if it is newer and changed.
-	$autosave = wp_get_post_autosave( $post->ID );
+	$autosave_response = gutenberg_api_request( sprintf( '/wp/v2/posts/%s/autosaves?context=edit', $post->ID ) );
 
-	if ( ! $autosave ) {
+	if ( ! isset( $autosave_response['body'][0] ) ) {
 		return false;
 	}
 
+	$autosave = $autosave_response['body'][0];
+
 	// Check if the autosave is newer than the current post.
-	if (
-		mysql2date( 'U', $autosave->post_modified_gmt, false ) > mysql2date( 'U', $post->post_modified_gmt, false )
-	) {
+	if ( mysql2date( 'U', $autosave['modified_gmt'], false ) > mysql2date( 'U', $post->post_modified_gmt, false ) ) {
 		return $autosave;
 	}
 
 	// If the autosave isn't newer, remove it.
-	wp_delete_post_revision( $autosave->ID );
+	wp_delete_post_revision( $autosave['id'] );
 
 	return false;
 }
@@ -1673,11 +1668,11 @@ function gutenberg_editor_scripts_and_styles( $hook ) {
 
 	$post_autosave = gutenberg_get_autosave_newer_than_post_save( $post );
 	if ( $post_autosave ) {
-		$editor_settings['autosave'] = array(
-			'editLink' => add_query_arg( 'gutenberg', true, get_edit_post_link( $post_autosave->ID ) ),
-			'title'    => $post_autosave->post_title,
-			'content'  => $post_autosave->post_content,
-			'excerpt'  => $post_autosave->post_excerpt,
+		$editor_settings['autosave'] = array_merge(
+			array(
+				'editLink' => add_query_arg( 'gutenberg', true, get_edit_post_link( $post_autosave['id'] ) ),
+			),
+			$post_autosave
 		);
 	}
 

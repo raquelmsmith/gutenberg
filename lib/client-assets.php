@@ -888,6 +888,45 @@ add_action( 'wp_enqueue_scripts', 'gutenberg_register_scripts_and_styles', 5 );
 add_action( 'admin_enqueue_scripts', 'gutenberg_register_scripts_and_styles', 5 );
 
 /**
+ * Return result of internal request to REST API for purpose of preloading
+ * data to be attached to the page.
+ *
+ * @param  string $path REST API path to preload.
+ * @return array        An associative array encapsulating data from the response.
+ */
+function gutenberg_api_request( $path ) {
+	if ( empty( $path ) ) {
+		return;
+	}
+
+	$path_parts = parse_url( $path );
+	if ( false === $path_parts ) {
+		return;
+	}
+
+	$request = new WP_REST_Request( 'GET', $path_parts['path'] );
+	if ( ! empty( $path_parts['query'] ) ) {
+		parse_str( $path_parts['query'], $query_params );
+		$request->set_query_params( $query_params );
+	}
+
+	$response = rest_do_request( $request );
+	if ( 200 === $response->status ) {
+		$server = rest_get_server();
+		$data   = (array) $response->get_data();
+		$links  = $server->get_compact_response_links( $response );
+		if ( ! empty( $links ) ) {
+			$data['_links'] = $links;
+		}
+
+		return array(
+			'body'    => $data,
+			'headers' => $response->headers,
+		);
+	}
+}
+
+/**
  * Append result of internal request to REST API for purpose of preloading
  * data to be attached to the page. Expected to be called in the context of
  * `array_reduce`.
@@ -908,30 +947,10 @@ function gutenberg_preload_api_request( $memo, $path ) {
 		return $memo;
 	}
 
-	$path_parts = parse_url( $path );
-	if ( false === $path_parts ) {
-		return $memo;
-	}
+	$reponse = gutenberg_api_request( $path );
 
-	$request = new WP_REST_Request( 'GET', $path_parts['path'] );
-	if ( ! empty( $path_parts['query'] ) ) {
-		parse_str( $path_parts['query'], $query_params );
-		$request->set_query_params( $query_params );
-	}
-
-	$response = rest_do_request( $request );
-	if ( 200 === $response->status ) {
-		$server = rest_get_server();
-		$data   = (array) $response->get_data();
-		$links  = $server->get_compact_response_links( $response );
-		if ( ! empty( $links ) ) {
-			$data['_links'] = $links;
-		}
-
-		$memo[ $path ] = array(
-			'body'    => $data,
-			'headers' => $response->headers,
-		);
+	if ( isset( $response ) ) {
+		$memo[ $path ] = $reponse;
 	}
 
 	return $memo;

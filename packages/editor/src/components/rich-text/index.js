@@ -99,7 +99,6 @@ export class RichText extends Component {
 		this.isActive = this.isActive.bind( this );
 
 		this.formatToValue = memize( this.formatToValue.bind( this ), { size: 1 } );
-		this.createRecordFromRange = memize( this.createRecordFromRange.bind( this ), { size: 1 } );
 
 		this.savedContent = value;
 		this.patterns = getPatterns( {
@@ -228,11 +227,13 @@ export class RichText extends Component {
 	}
 
 	createRecord() {
-		return this.createRecordFromRange( getSelection().getRangeAt( 0 ) );
-	}
+		const range = getSelection().getRangeAt( 0 );
 
-	createRecordFromRange( range ) {
-		return create( {
+		if ( range === this.createRecord.lastRange ) {
+			return this.createRecord.lastRecord;
+		}
+
+		const record = create( {
 			element: this.editableRef,
 			range,
 			multilineTag: this.multilineTag,
@@ -242,6 +243,11 @@ export class RichText extends Component {
 			removeAttribute: ( attribute ) => attribute.indexOf( 'data-mce-' ) === 0,
 			filterString: ( string ) => string.replace( TINYMCE_ZWSP, '' ),
 		} );
+
+		this.createRecord.lastRecord = record;
+		this.createRecord.lastRange = range;
+
+		return record;
 	}
 
 	applyRecord( record ) {

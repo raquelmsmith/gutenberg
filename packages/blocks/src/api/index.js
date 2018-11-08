@@ -24,6 +24,7 @@ export { isValidBlockContent, isValidBlock } from './validation';
 export {
 	getCategories,
 	setCategories,
+	setCategoryIcon,
 } from './categories';
 export {
 	registerBlockType,

@@ -41,6 +41,7 @@ class Popover extends Component {
 		this.computePopoverPosition = this.computePopoverPosition.bind( this );
 		this.maybeClose = this.maybeClose.bind( this );
 		this.throttledRefresh = this.throttledRefresh.bind( this );
+		this.stopEventPropagationOutsidePopover = this.stopEventPropagationOutsidePopover.bind( this );
 
 		this.contentNode = createRef();
 		this.anchorNode = createRef();
@@ -151,6 +152,14 @@ class Popover extends Component {
 			// accessed via keyboard navigation.
 			this.contentNode.current.focus();
 		}
+	}
+
+	/**
+	 * Stop all onMouseDown events propagating further - they should only go to the popover
+ 	 * @param {string} event Event object
+	 */
+	stopEventPropagationOutsidePopover( event ) {
+		event.stopPropagation();
 	}
 
 	getAnchorRect( anchor ) {
@@ -283,6 +292,7 @@ class Popover extends Component {
 					} }
 					{ ...contentProps }
 					onKeyDown={ this.maybeClose }
+					onMouseDown={ this.stopEventPropagationOutsidePopover }
 				>
 					{ isMobile && (
 						<div className="components-popover__header">

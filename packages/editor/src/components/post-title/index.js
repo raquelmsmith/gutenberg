@@ -21,6 +21,7 @@ import { withInstanceId, compose } from '@wordpress/compose';
  */
 import PostPermalink from '../post-permalink';
 import PostTypeSupportCheck from '../post-type-support-check';
+import { cleanForSlug } from '../../utils/url';
 
 /**
  * Constants
@@ -57,7 +58,8 @@ class PostTitle extends Component {
 
 	onChange( event ) {
 		const newTitle = event.target.value.replace( REGEXP_NEWLINES, ' ' );
-		this.props.onUpdate( newTitle );
+		const generatedSlug = ( '' === this.props.slug ) ? cleanForSlug( newTitle ) : this.props.generated_slug;
+		this.props.onUpdate( newTitle, generatedSlug );
 	}
 
 	onKeyDown( event ) {
@@ -157,6 +159,7 @@ const applyWithSelect = withSelect( ( select ) => {
 	return {
 		isCleanNewPost: isCleanNewPost(),
 		title: getEditedPostAttribute( 'title' ),
+		slug: getEditedPostAttribute( 'slug' ),
 		isPostTypeViewable: get( postType, [ 'viewable' ], false ),
 		placeholder: titlePlaceholder,
 		isFocusMode: focusMode,
@@ -177,8 +180,8 @@ const applyWithDispatch = withDispatch( ( dispatch ) => {
 		onEnterPress() {
 			insertDefaultBlock( undefined, undefined, 0 );
 		},
-		onUpdate( title ) {
-			editPost( { title } );
+		onUpdate( title, generatedSlug ) {
+			editPost( { title, generated_slug: generatedSlug } );
 		},
 		onUndo: undo,
 		onRedo: redo,

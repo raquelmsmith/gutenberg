@@ -7,19 +7,26 @@ import { __ } from '@wordpress/i18n';
 import { Button } from '@wordpress/components';
 import { compose } from '@wordpress/compose';
 
+/**
+ * Internal dependencies
+ */
+import { cleanForSlug } from '../../utils/url';
+
 class PostPermalinkEditor extends Component {
-	constructor( { permalinkParts } ) {
+	constructor( { permalinkParts, postTitle } ) {
 		super( ...arguments );
 
 		this.state = {
 			editedPostName: permalinkParts.postName,
+			postTitle,
 		};
 
 		this.onSavePermalink = this.onSavePermalink.bind( this );
 	}
 
 	onSavePermalink( event ) {
-		const postName = this.state.editedPostName.replace( /\s+/g, '-' );
+		const postName = cleanForSlug( this.state.editedPostName );
+		const generatedSlug = postName || cleanForSlug( this.state.postTitle );
 
 		event.preventDefault();
 
@@ -31,6 +38,7 @@ class PostPermalinkEditor extends Component {
 
 		this.props.editPost( {
 			slug: postName,
+			generated_slug: generatedSlug,
 		} );
 
 		this.setState( {
@@ -81,9 +89,10 @@ class PostPermalinkEditor extends Component {
 
 export default compose( [
 	withSelect( ( select ) => {
-		const { getPermalinkParts } = select( 'core/editor' );
+		const { getPermalinkParts, getEditedPostAttribute } = select( 'core/editor' );
 		return {
 			permalinkParts: getPermalinkParts(),
+			postTitle: getEditedPostAttribute( 'title' ),
 		};
 	} ),
 	withDispatch( ( dispatch ) => {

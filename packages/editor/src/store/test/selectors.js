@@ -2523,12 +2523,37 @@ describe( 'selectors', () => {
 						},
 					},
 				},
+				reusableBlocks: {
+					data: {},
+				},
 			};
 
 			expect( getGlobalBlockCount( state ) ).toBe( 2 );
 		} );
 
-		it( 'should return the global umber of blocks of a given type', () => {
+		it( 'should exclude blocks referenced by reusable blocks from the count', () => {
+			const state = {
+				editor: {
+					present: {
+						blocks: {
+							byClientId: {
+								123: { clientId: 123, name: 'core/paragraph', attributes: {} },
+								456: { clientId: 456, name: 'core/paragraph', attributes: {} },
+							},
+						},
+					},
+				},
+				reusableBlocks: {
+					data: {
+						1: { clientId: 456 },
+					},
+				},
+			};
+
+			expect( getGlobalBlockCount( state ) ).toBe( 1 );
+		} );
+
+		it( 'should return the global number of blocks of a given type', () => {
 			const state = {
 				editor: {
 					present: {
@@ -2541,6 +2566,9 @@ describe( 'selectors', () => {
 							},
 						},
 					},
+				},
+				reusableBlocks: {
+					data: {},
 				},
 			};
 
@@ -2555,6 +2583,9 @@ describe( 'selectors', () => {
 							byClientId: {},
 						},
 					},
+				},
+				reusableBlocks: {
+					data: {},
 				},
 			};
 			expect( getGlobalBlockCount( state ) ).toBe( 0 );

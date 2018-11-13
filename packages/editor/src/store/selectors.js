@@ -729,7 +729,7 @@ export const getClientIdsWithDescendants = createSelector(
 export const getGlobalBlockCount = createSelector(
 	( state, blockName ) => {
 		if ( ! blockName ) {
-			return size( state.editor.present.blocks.byClientId );
+			return size( state.editor.present.blocks.byClientId ) - size( state.reusableBlocks.data );
 		}
 		return reduce(
 			state.editor.present.blocks.byClientId,

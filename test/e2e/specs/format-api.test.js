@@ -3,9 +3,18 @@
  */
 import {
 	clickBlockAppender,
+	META_KEY,
 	newPost,
+	pressWithModifier,
 } from '../support/utils';
 import { activatePlugin, deactivatePlugin } from '../support/plugins';
+
+/**
+ * The modifier keys needed to invoke a 'select the next word' keyboard shortcut.
+ *
+ * @type {string}
+ */
+const SELECT_WORD_MODIFIER_KEYS = process.platform === 'darwin' ? [ 'Shift', 'Alt' ] : [ 'Shift', 'Control' ];
 
 describe( 'Using Format API', () => {
 	beforeAll( async () => {
@@ -30,7 +39,9 @@ describe( 'Using Format API', () => {
 	it( 'Clicking the control wraps the selected text properly with HTML code', async () => {
 		await clickBlockAppender();
 		await page.keyboard.type( 'First paragraph' );
-		await page.click( '.wp-block-paragraph', { clickCount: 3 } );
+		//await page.click( '.wp-block-paragraph', { clickCount: 3 } );
+		await pressWithModifier( SELECT_WORD_MODIFIER_KEYS, 'ArrowLeft' );
+		await pressWithModifier( META_KEY, 'A' );
 		await page.mouse.move( 200, 300, { steps: 10 } );
 		await page.click( '.dashicons-editor-bold' );
 		const paragraphContent = await page.$eval( 'div[data-type="core/paragraph"] p', ( element ) => element.innerHTML );
